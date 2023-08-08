@@ -1,0 +1,29 @@
+.container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    padding: 8px;
+    font-size: 1rem;
+    background-color: #FACDE5;
+}
+
+.expandedLoginLink {
+    width: 320px;
+    text-align: left;
+    margin-top: 2px;
+}
+
+.linkText {
+    font-size: 14px;    
+    color: black;
+}
+
+.routeContainer {
+    margin: 32px;
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
