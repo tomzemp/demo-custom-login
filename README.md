@@ -1,45 +1,86 @@
-This project was bootstrapped with [DHIS2 Application Platform](https://github.com/dhis2/app-platform).
+# Building a custom login app
 
-## Available Scripts
+This README highlights how you can build a custom login app for your DHIS2 instance.
 
-In the project directory, you can run:
+In general, we recommend that you try to use the existing login app and if desired customize the layout and styling with a html/css template. A custom login app may be applicable if you have significant additional functionality you want to include in your login app, or if you want to make use of your own custom components.
 
-### `yarn start`
+## Using the correct app type
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The app platform now supports building login apps. Running a standard apps requires that a user be authenticated, as standard app use system and user settings that are behind the auth wall. An app with type `login_app` does not make any requests to resources that are behind an auth wall, so you do not need to authenticate to run the app.
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+The app type should be specified in your d2.config.js file. See example [example](./d2.config.js)
 
-### `yarn test`
+## Running your app
 
-Launches the test runner and runs all available tests found in `/src`.<br />
+When you run the app locally you will need to provide the base url which you want to run the app against, but you will not need to authenticate. You can provide the base url with a environment variable, for example if you want to use http://localhost:8080 as your base url, you can run the app as follows `DHIS2_BASE_URL='http://localhost:8080' yarn start`
 
-See the section about [running tests](https://platform.dhis2.nu/#/scripts/test) for more information.
+## Login UI Components
 
-### `yarn build`
+The DHIS2 UI library makes available various forms that can be used when building your custom login app. You can import these from @dhis2/ui, for example:
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+`import { LoginForm } from '@dhis2/ui'`
 
-The build is minified and the filenames include the hashes.<br />
-A deployable `.zip` file can be found in `build/bundle`!
+In order to provide full login functionality, these forms contain links within each other. In order for the links to work, you will need to implement
 
-See the section about [building](https://platform.dhis2.nu/#/scripts/build) for more information.
+It is possible, however, to use the <LoginForm> component as a stand alone. In this case, in order to hide the links in the component, you should disable self registration and account recovery; these can be disabled in System Settings > Access.
 
-### `yarn deploy`
+## Setting up a router
 
-Deploys the built app in the `build` folder to a running DHIS2 instance.<br />
-This command will prompt you to enter a server URL as well as the username and password of a DHIS2 user with the App Management authority.<br/>
-You must run `yarn build` before running `yarn deploy`.<br />
+In order to support the navigation functionality in the UI library's login components, you will need to set up a router, such that your app contains the appropriate pages to navigate to.
 
-See the section about [deploying](https://platform.dhis2.nu/#/scripts/deploy) for more information.
+| endpoint                | required?                                                                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                     | Always required. Your login form should be at this endpoint.                                                                                                                          |
+| `/create-account`       | Required if you have enabled self registration. This is the page where users can fill out details to create an account.                                                               |
+| `confirm-email`         | Required if you have enabled self registration and have configured email. This is where users will be sent to complete account creation after they receive a link sent to their email |
+| `complete-registration` | Required if you have configured email. This is where users are directed after an account is created and allows them to finalize the account creation process.                         |
+| `reset-password`        | Required if you have enabled account recovery. This is where users should be able to request a link to reset their password                                                           |
+| `update-password`       | Required if you have enabled account recovery. This is where users reset their password (after they have received a link to do so in their email)                                     |
 
-## Learn More
+### Router: technical notes
 
-You can learn more about the platform in the [DHIS2 Application Platform Documentation](https://platform.dhis2.nu/).
+We recommend using react-router's HashRouter to set up your router, but you are free to use other implementations. Because the DHIS2 backednd is not configured to recognize all possible endpoints, you should use a hash router and let your app load the appropriate page.
 
-You can learn more about the runtime in the [DHIS2 Application Runtime Documentation](https://runtime.dhis2.nu/).
+### Router: sample implementation
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Below is a sample implementation of react-router-dom's HashRouter with the appropriate endpoints set up with the corresponding DHIS2 UI forms.
+
+```
+import {
+    CompleteRegistrationForm,
+    ConfirmEmailForm,
+    CreateAccountForm,
+    LoginForm,
+    PasswordResetRequestForm,
+    PasswordUpdateForm,
+} from '@dhis2/ui'
+import React from 'react'
+import { HashRouter, Link, Navigate, Routes, Route } from 'react-router-dom'
+
+const App = () => (
+    <>
+        <HashRouter>
+            <Routes>
+                <Route path="/" element={<ExpandedLoginForm />} />
+                <Route path="/create-account" element={<CreateAccountForm />} />
+                <Route
+                    path="/complete-registration"
+                    element={<CompleteRegistrationForm />}
+                />
+                <Route path="/reset-password" element={<PasswordResetRequestForm />} />
+                <Route path="/update-password" element={<PasswordUpdateForm />} />
+                <Route path="/confirm-email" element={<ConfirmEmailForm />} />
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        </HashRouter>
+    </>
+)
+
+export default App
+```
+
+### Router: customization
+
+When building your own login app, you will most likely want to swap out some of the standard DHIS2 components with your own components. You can of course do this. We encourage you to provide appropriate navigation back to the login page.
+
+You can also add additional routes and link to these as you see fit by modifying (or creating you own) components for the other endpoints.
